@@ -154,55 +154,72 @@
 async function fetchNews() {
     const query = document.getElementById('country-input').value.trim();
     const newsContainer = document.getElementById('news-container');
-    
-    if (!query) {
-        alert("请输入搜索词！");
-        return;
-    }
+    if (!query) return;
 
-    newsContainer.innerHTML = '<p style="text-align:center;">正在连接全球新闻卫星...</p>';
+    newsContainer.innerHTML = '<p style="text-align:center;">正在检索全球报道及深度讨论...</p>';
 
     try {
-        // 使用 Google News RSS + RSS2JSON 中转
-        // 我们通过编码 query 来支持中文或多国搜索
-        const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+        const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US`;
         const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
-
         const response = await fetch(apiUrl);
         const data = await response.json();
 
-        if (data.status === 'ok' && data.items.length > 0) {
-            newsContainer.innerHTML = ''; // 清空提示
+        newsContainer.innerHTML = '';
+        data.items.slice(0, 3).forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'section'; // 复用你的简约卡片样式
+            card.style = "border: 1px solid #eee; margin-bottom: 15px; padding: 15px; border-radius: 12px;";
             
-            data.items.slice(0, 5).forEach(item => {
-                // 创建新闻卡片
-                const card = document.createElement('div');
-                card.style = `
-                    padding: 15px; 
-                    border: 1px solid #eee; 
-                    border-radius: 12px; 
-                    transition: background 0.2s;
-                    cursor: pointer;
-                `;
-                card.onmouseover = () => card.style.background = "#f9f9fb";
-                card.onmouseout = () => card.style.background = "white";
-                card.onclick = () => window.open(item.link, '_blank');
+            card.innerHTML = `
+                <h3 style="margin:0 0 10px 0; font-size:1rem;">${item.title}</h3>
+                <button onclick="fetchComments('${encodeURIComponent(item.title)}', 'comment-area-${index}')" 
+                        style="background: #f0f2f5; color: #555; font-size: 12px; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">
+                    💬 查看 Reddit 热门讨论
+                </button>
+                <div id="comment-area-${index}" style="margin-top: 15px; font-size: 0.85rem; color: #444;"></div>
+            `;
+            newsContainer.appendChild(card);
+        });
+    } catch (e) {
+        newsContainer.innerHTML = '<p>同步失败，请稍后重试。</p>';
+    }
+}
 
-                card.innerHTML = `
-                    <h3 style="margin: 0 0 8px 0; font-size: 1rem; color: var(--text-main);">${item.title}</h3>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-sub);">
-                        <span>${item.author || '新闻源'}</span>
-                        <span>${new Date(item.pubDate).toLocaleDateString()}</span>
-                    </div>
-                `;
-                newsContainer.appendChild(card);
-            });
+async function fetchComments(title, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "正在搜索社交媒体评论...";
+
+    try {
+        // 在 Reddit 搜索相关标题的帖子
+        const searchUrl = `https://www.reddit.com/search.json?q=${title}&limit=1&sort=relevance`;
+        const res = await fetch(searchUrl);
+        const searchData = await res.json();
+        
+        if (searchData.data.children.length > 0) {
+            const postUrl = searchData.data.children[0].data.permalink;
+            // 获取该帖子的具体评论
+            const commentRes = await fetch(`https://www.reddit.com${postUrl}.json?limit=3`);
+            const commentData = await commentRes.json();
+            
+            const comments = commentData[1].data.children;
+            if (comments.length > 0) {
+                container.innerHTML = '<strong style="display:block; margin-bottom:5px; color:var(--primary-color);">Top 讨论:</strong>';
+                comments.slice(0, 3).forEach(c => {
+                    if(c.data.body) {
+                        container.innerHTML += `<div style="background:#f8f9fa; padding:8px; border-radius:8px; margin-bottom:5px; border-left:3px solid #ddd;">
+                            “${c.data.body.substring(0, 150)}...” 
+                            <span style="display:block; font-size:10px; color:gray; text-align:right;">👍 ${c.data.ups}</span>
+                        </div>`;
+                    }
+                });
+            } else {
+                container.innerHTML = "该新闻在 Reddit 上暂无深度讨论。";
+            }
         } else {
-            newsContainer.innerHTML = '<p>未找到相关新闻，尝试换个词试试？</p>';
+            container.innerHTML = "社交媒体上尚未匹配到相关热门贴。";
         }
-    } catch (error) {
-        newsContainer.innerHTML = '<p>新闻加载失败，请检查网络连接。</p>';
-        console.error(error);
+    } catch (e) {
+        container.innerHTML = "评论加载受限（Reddit 访问频率限制）。";
     }
 }
 </script>
