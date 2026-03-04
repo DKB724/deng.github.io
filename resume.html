@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简简历生成器 | Resume Craft</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f5f6fa;
+            --paper: #ffffff;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            background: var(--bg);
+            color: var(--primary);
+        }
+
+        /* 左侧编辑区 */
+        .editor {
+            width: 400px;
+            padding: 30px;
+            overflow-y: auto;
+            background: #fff;
+            border-right: 1px solid #ddd;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+        }
+
+        /* 右侧预览区 */
+        .preview-container {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .resume-paper {
+            width: 210mm; /* A4 标准宽度 */
+            min-height: 297mm;
+            background: var(--paper);
+            padding: 20mm;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+
+        /* 简历样式排版 */
+        .res-header { text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 20px; }
+        .res-name { font-size: 28px; font-weight: bold; margin: 0; }
+        .res-contact { font-size: 14px; color: #666; margin-top: 5px; }
+        
+        .res-section { margin-top: 20px; }
+        .res-section-title { 
+            font-size: 18px; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+        .res-item { display: flex; justify-content: space-between; font-weight: bold; }
+        .res-desc { font-size: 14px; margin-top: 5px; white-space: pre-line; }
+
+        /* 表单样式 */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #7f8c8d; }
+        input, textarea { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 6px; 
+            box-sizing: border-box;
+        }
+        textarea { height: 100px; resize: vertical; }
+
+        .btn-print {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 30px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        /* 打印优化 */
+        @media print {
+            .editor, .btn-print { display: none; }
+            .preview-container { padding: 0; background: none; }
+            .resume-paper { box-shadow: none; margin: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="editor">
+        <h2>简历编辑器</h2>
+        <div class="form-group">
+            <label>姓名</label>
+            <input type="text" id="in-name" placeholder="张三" oninput="update()">
+        </div>
+        <div class="form-group">
+            <label>联系方式 (邮箱/电话/GitHub)</label>
+            <input type="text" id="in-contact" placeholder="email@example.com | 138..." oninput="update()">
+        </div>
+        
+        <div class="res-section">
+            <label>教育经历 (学校 - 专业 - 时间)</label>
+            <input type="text" id="in-edu-title" placeholder="国立台湾大学 - 神经发育硕士 - 2024至今" oninput="update()">
+            <label>详细描述</label>
+            <textarea id="in-edu-desc" oninput="update()" placeholder="主修课程、GPA、奖学金等..."></textarea>
+        </div>
+
+        <div class="res-section">
+            <label>工作/科研经历 (机构 - 职位 - 时间)</label>
+            <input type="text" id="in-work-title" placeholder="某生物实验室 - 研究助理 - 2025" oninput="update()">
+            <label>详细描述</label>
+            <textarea id="in-work-desc" oninput="update()" placeholder="负责小鼠房日常维护、数据采集分析..."></textarea>
+        </div>
+    </div>
+
+    <div class="preview-container">
+        <div class="resume-paper" id="print-area">
+            <div class="res-header">
+                <p class="res-name" id="out-name">姓名</p>
+                <p class="res-contact" id="out-contact">联系方式</p>
+            </div>
+
+            <div class="res-section">
+                <div class="res-section-title">教育背景</div>
+                <div id="out-edu">
+                    <div class="res-item"><span id="out-edu-title">学校名称</span></div>
+                    <div class="res-desc" id="out-edu-desc">教育详细描述内容</div>
+                </div>
+            </div>
+
+            <div class="res-section">
+                <div class="res-section-title">工作/项目经历</div>
+                <div id="out-work">
+                    <div class="res-item"><span id="out-work-title">机构名称</span></div>
+                    <div class="res-desc" id="out-work-desc">工作详细描述内容</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-print" onclick="window.print()">导出 PDF / 打印</button>
+
+    <script>
+        function update() {
+            // 获取输入值并实时映射到预览区
+            const fields = ['name', 'contact', 'edu-title', 'edu-desc', 'work-title', 'work-desc'];
+            
+            fields.forEach(field => {
+                const val = document.getElementById('in-' + field).value;
+                const out = document.getElementById('out-' + field);
+                if (val) {
+                    out.innerText = val;
+                }
+            });
+        }
+        
+        // 初始化一次
+        update();
+    </script>
+</body>
+</html>
