@@ -1,2 +1,53 @@
-<h1>你好，这是我的第一个 GitHub 网站！</h1>
-<p>我正在学习如何搭建网站。</p>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>我的个人主页</title>
+    <style>
+        /* 这里的 CSS 负责给两个部分“划边界” */
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; background-color: #f4f4f9; }
+        
+        .content-section { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        #game-container { background: #fffbe6; padding: 20px; border: 2px dashed #ffda44; border-radius: 10px; text-align: center; position: relative; min-height: 300px; }
+        
+        #target { font-size: 80px; cursor: pointer; user-select: none; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <div class="content-section">
+        <h1>你好，欢迎来到我的网站</h1>
+        <p>这是我的第一个 GitHub 页面。我正在学习网页开发和神经科学。</p>
+        <p>往下看，这里有一个我刚加入的小游戏！</p>
+    </div>
+
+    <div id="game-container">
+        <h2>点中那个大脑 (得分: <span id="score">0</span>)</h2>
+        <p>看你能不能抓到它：</p>
+        <div id="target">🧠</div>
+    </div>
+
+    <script>
+        // 游戏逻辑保持独立
+        let score = 0;
+        const target = document.getElementById('target');
+        const scoreDisplay = document.getElementById('score');
+        const container = document.getElementById('game-container');
+
+        target.onclick = function() {
+            score++;
+            scoreDisplay.innerText = score;
+            
+            // 限制大脑只在游戏容器范围内移动
+            const maxX = container.clientWidth - 100;
+            const maxY = container.clientHeight - 150;
+            
+            target.style.position = 'absolute';
+            target.style.left = Math.random() * maxX + 'px';
+            target.style.top = (Math.random() * maxY + 80) + 'px'; // 避开标题位置
+        };
+    </script>
+
+</body>
+</html>
